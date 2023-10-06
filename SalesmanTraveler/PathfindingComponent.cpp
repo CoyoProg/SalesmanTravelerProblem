@@ -10,6 +10,7 @@ PathfindingComponent::~PathfindingComponent()
 {
     delete[] finalPath;
     delete[] isVisited;
+    delete[] cityMatrix;
 }
 
 int* PathfindingComponent::FindNearestPath(int** cityMatrixP, int startingPointP, int matrixSizeP)
@@ -30,6 +31,8 @@ int* PathfindingComponent::FindNearestPath(int** cityMatrixP, int startingPointP
 
 void PathfindingComponent::Initialize(int startingPointP)
 {
+    finalCost = INT_MAX;
+
     /** Initialize nearest Path */
     finalPath = new int[numberOfCity];
     finalPath[0] = startingPointP;
@@ -41,46 +44,43 @@ void PathfindingComponent::Initialize(int startingPointP)
         isVisited[i] = false;
     }
 
-    /** Initialize Current Path */
-    int* currentPath = new int [numberOfCity + 1];
-
-    // Calculate initial lower bound for the root node
-    // using the formula 1/2 * (sum of first min +
-    // second min) for all edges.
-    // Also initialize the curr_path and visited array
+    /** Initialize currentBound & currentPath */
+    int* currentPath = new int [numberOfCity + 1];              // +1 because we need to comeback to the first node
     int currentBound = 0;
     memset(currentPath, -1, sizeof(currentPath));
 
-    // Compute initial bound
+    /** Compute initial bound */
     for (int i = 0; i < numberOfCity; i++)
     {
         currentBound += (FirstMinimumEdgeCost(i) + SecondMinimumEdgeCost(i));
     }
 
-    // Rounding off the lower bound to an integer
+    /** Rounding off the lower bound to an integer */
     currentBound = (currentBound & 1) ? currentBound / 2 + 1 : currentBound / 2;
 
-    // We start at vertex 1 so the first vertex
-    // in curr_path[] is 0
+    /** We start at vertex startingPointP so the first vertex in currentPath is startingPoint */
     isVisited[startingPointP] = true;
     currentPath[0] = startingPointP;
 
-    // Call to TSPRec for curr_weight equal to
-    // 0 and level 1
+    /** Call to BranchAndBound for curr_weight equal to 0 and level 1 */
     BranchAndBound( currentBound, 0, 1, currentPath);
+
+    delete[] currentPath;
 }
 
 void PathfindingComponent::BranchAndBound(int currentBoundP, int currentWeightP, int currentLevelP, int* currentPathP)
 {
+    int lastClosestNode = currentPathP[currentLevelP - 1];
+    int startingNode = currentPathP[0];
 
     /** If CurrentLevel == numberOfCity then we covered all the nodes */
     if (currentLevelP == numberOfCity)
     {
-        /** check if there is an edge from last vertex in path back to the first vertex */
-        if (cityMatrix[currentPathP[currentLevelP - 1]][currentPathP[0]] != 0)
+        /** Check if there is an edge from the lastClosestNode back to the starting vertext */
+        if (cityMatrix[lastClosestNode][startingNode] != 0)
         {
             /** currentCost has the total weight of the solution we got */
-            int currentCost = currentWeightP + cityMatrix[currentPathP[currentLevelP - 1]][currentPathP[0]];
+            int currentCost = currentWeightP + cityMatrix[lastClosestNode][startingNode];
 
             /** Update finalCost and finalPath if currentCost is better. */
             if (currentCost < finalCost)
@@ -92,40 +92,39 @@ void PathfindingComponent::BranchAndBound(int currentBoundP, int currentWeightP,
         return;
     }
 
-    /** for any other level iterate for all vertices to build the search space tree recursively */
+    /** for any other level, iterate for all vertices */
     for (int i = 0; i < numberOfCity; i++)
     {
-        /** Chech if the node isn't == 0 and not visited yet */
-        if (cityMatrix[currentPathP[currentLevelP - 1]][i] != 0 && isVisited[i] == false)
+        /** Chech if there is an edge between the LastClosest node & the new vertex i, 
+            and if the vertex i hasn't beend visited yet*/
+        if (cityMatrix[lastClosestNode][i] != 0 && isVisited[i] == false)
         {
             int temp = currentBoundP;
-            currentWeightP += cityMatrix[currentPathP[currentLevelP - 1]][i];
+            currentWeightP += cityMatrix[lastClosestNode][i];
 
-            // different computation of curr_bound for level 2 from the other levels
+            /** Calculate the minimum cost from lastClosestNode & vertex i */
             if (currentLevelP == 1)
-                currentBoundP -= ((FirstMinimumEdgeCost(currentPathP[currentLevelP - 1]) + FirstMinimumEdgeCost(i)) / 2);
+                currentBoundP -= ((FirstMinimumEdgeCost(lastClosestNode) + FirstMinimumEdgeCost(i)) / 2);
             else
-                currentBoundP -= ((SecondMinimumEdgeCost(currentPathP[currentLevelP - 1]) + FirstMinimumEdgeCost(i)) / 2);
+                currentBoundP -= ((SecondMinimumEdgeCost(lastClosestNode) + FirstMinimumEdgeCost(i)) / 2);
 
-            // curr_bound + curr_weight is the actual lower bound
-            // for the node that we have arrived on
-            // If current lower bound < final_res, we need to explore
-            // the node further
+            /** If currentBound + currentWeight < finalCost, we need to explore the next level */
             if (currentBoundP + currentWeightP < finalCost)
             {
                 currentPathP[currentLevelP] = i;
                 isVisited[i] = true;
 
-                // call TSPRec for the next level
+                /** call BranchAndBound for the next level */
                 BranchAndBound(currentBoundP, currentWeightP, currentLevelP + 1, currentPathP);
             }
 
-            // Else we have to prune the node by resetting
-            // all changes to curr_weight and curr_bound
-            currentWeightP -= cityMatrix[currentPathP[currentLevelP - 1]][i];
+            lastClosestNode = currentPathP[currentLevelP - 1];
+
+            /** Else we have to reset all changes to currentWeight and currentBound */
+            currentWeightP -= cityMatrix[lastClosestNode][i];
             currentBoundP = temp;
 
-            // Also reset the visited array
+            /** And reset isVisited to false, only the nodes in currentPath are set to true */
             memset(isVisited, false, sizeof(isVisited));
             for (int i = 0; i <= currentLevelP - 1; i++)
             {

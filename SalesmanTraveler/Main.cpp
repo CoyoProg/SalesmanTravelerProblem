@@ -6,6 +6,19 @@
 
 int main()
 {
-	Game::instance().load();
+	bool playing = true;
+
+	Game::instance().Load();
+
+	while (playing)
+	{
+		Game::instance().Play();
+
+		// Pause the console on Windows
+		system("pause"); 
+
+		// Clear Console
+		std::cout << "\x1B[2J\x1B[H";
+	}
 }
 

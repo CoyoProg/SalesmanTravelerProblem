@@ -10,7 +10,7 @@ Game::Game()
 {
 }
 
-void Game::load()
+void Game::Load()
 {
 	/** We Create 5 Cities */
 	City* city1 = new City("City A");
@@ -35,7 +35,12 @@ void Game::load()
 	ConnectCities(city3, city5, ROAD_NORMAL);
 	ConnectCities(city4, city5, ROAD_NORMAL);
 
-	Player* player = new Player(this);
+	player = new Player(this);
+}
+
+void Game::Play()
+{
+	player->FindPath();
 }
 
 void Game::ConnectCities(City* cityA, City* cityB, int distanceP)

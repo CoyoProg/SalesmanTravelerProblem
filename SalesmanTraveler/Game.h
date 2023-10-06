@@ -3,6 +3,7 @@
 
 class City;
 class Roads;
+class Player;
 
 class Game
 {
@@ -20,7 +21,8 @@ public:
 	Game(Game&&) = delete;
 	Game& operator = (Game&&) = delete;
 
-	void load();
+	void Load();
+	void Play();
 
 	std::vector<City*>& getAllCities() { return cities; }
 	std::vector<Roads*>& getAllRoads() { return roads; }
@@ -29,5 +31,7 @@ private:
 	void ConnectCities(City* cityA, City* cityB, int dinstanceP);
 	std::vector<City*> cities;
 	std::vector<Roads*> roads;
+
+	Player* player;
 };
 
